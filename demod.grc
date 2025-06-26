@@ -1,0 +1,599 @@
+options:
+  parameters:
+    author: Eian
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: hb
+    hier_block_src_path: '.:'
+    id: const_demod
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Constellation Demodulator
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: rrc_taps
+  id: variable
+  parameters:
+    comment: ''
+    value: firdes.root_raised_cosine(32, 32, 1.0/float(samp_per_sym), exbw, 11*samp_per_sym*32)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1728, 276.0]
+    rotation: 0
+    state: enabled
+- name: rrctaps
+  id: variable_rrc_filter_taps
+  parameters:
+    alpha: exbw
+    comment: ''
+    gain: '32'
+    ntaps: nfilt*samp_per_sym
+    samp_rate: nfilt*samp_per_sym
+    sym_rate: nfilt
+    value: ''
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1424, 144.0]
+    rotation: 0
+    state: enabled
+- name: C
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: ''
+    short_id: ''
+    type: ''
+    value: '[]'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [296, 20.0]
+    rotation: 0
+    state: enabled
+- name: agc_alpha
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: AGC Alpha
+    short_id: ''
+    type: ''
+    value: '0.001'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2120, 264.0]
+    rotation: 0
+    state: enabled
+- name: agc_ref
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: AGC Ref
+    short_id: ''
+    type: ''
+    value: '0.5'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1960, 164.0]
+    rotation: 0
+    state: enabled
+- name: arity
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: arity
+    short_id: ''
+    type: ''
+    value: '4'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2672, 80.0]
+    rotation: 0
+    state: enabled
+- name: bits_per_symbol
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Bits Per Symbol
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3984, 124.0]
+    rotation: 0
+    state: enabled
+- name: blocks_null_sink_1
+  id: blocks_null_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    bus_structure_sink: '[[0,],]'
+    comment: ''
+    num_inputs: '3'
+    type: float
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3264, 448.0]
+    rotation: 0
+    state: enabled
+- name: blocks_unpacked_to_packed_xx_0
+  id: blocks_unpacked_to_packed_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    bits_per_chunk: bits_per_symbol
+    comment: ''
+    endianness: gr.GR_MSB_FIRST
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_ports: '1'
+    type: byte
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3528, 380.0]
+    rotation: 0
+    state: enabled
+- name: const_slicer
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: TED Const Slicer
+    short_id: ''
+    type: ''
+    value: '[]'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3056, 136.0]
+    rotation: 0
+    state: enabled
+- name: digital_constellation_receiver_cb_0_0
+  id: digital_constellation_receiver_cb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: 'The receiver is the PLL
+
+      It also acts as the constellation
+
+      decoder'
+    constellation: C
+    fmax: max_freq_dev
+    fmin: min_freq_dev
+    loop_bw: loop_bw
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    showports: 'True'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2880, 424.0]
+    rotation: 0
+    state: enabled
+- name: digital_diff_decoder_bb_0_1
+  id: digital_diff_decoder_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    coding: digital.DIFF_DIFFERENTIAL
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    modulus: arity
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3328, 380.0]
+    rotation: 0
+    state: enabled
+- name: digital_symbol_sync_xx_0_0
+  id: digital_symbol_sync_xx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: Timing sync and demod
+    constellation: const_slicer
+    damping: timing_damping
+    loop_bw: timing_bw
+    max_dev: '0.00000001'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    nfilters: '32'
+    osps: '1'
+    pfb_mf_taps: rrc_taps
+    resamp_type: digital.IR_PFB_MF
+    sps: samp_per_sym
+    ted_gain: ted_gain
+    ted_type: digital.TED_SIGNAL_TIMES_SLOPE_ML
+    type: cc
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2048, 400.0]
+    rotation: 0
+    state: enabled
+- name: exbw
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: ''
+    short_id: ''
+    type: ''
+    value: '0.35'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [200, 20.0]
+    rotation: 0
+    state: enabled
+- name: import_0
+  id: import
+  parameters:
+    alias: ''
+    comment: ''
+    imports: import numpy as np
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1768, 168.0]
+    rotation: 0
+    state: enabled
+- name: loop_bw
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Loop Bandwidth
+    short_id: ''
+    type: ''
+    value: '0.0628'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3104, 268.0]
+    rotation: 0
+    state: enabled
+- name: max_freq_dev
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Max Freq Dev
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3752, 212.0]
+    rotation: 0
+    state: enabled
+- name: min_freq_dev
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Min_Freq_Dev
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3488, 112.0]
+    rotation: 0
+    state: enabled
+- name: nfilt
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Num Filters
+    short_id: ''
+    type: ''
+    value: '128'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1264, 496.0]
+    rotation: 0
+    state: enabled
+- name: pad_sink_0
+  id: pad_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: fll_out
+    num_streams: '1'
+    optional: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2048, 624.0]
+    rotation: 0
+    state: enabled
+- name: pad_sink_2
+  id: pad_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: symbol_out
+    num_streams: '1'
+    optional: 'False'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3912, 392.0]
+    rotation: 0
+    state: enabled
+- name: pad_sink_3
+  id: pad_sink
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: symbol_out
+    num_streams: '1'
+    optional: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3264, 616.0]
+    rotation: 0
+    state: enabled
+- name: pad_source_0
+  id: pad_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: in
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_streams: '1'
+    optional: 'False'
+    type: complex
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1704, 488.0]
+    rotation: 0
+    state: enabled
+- name: pad_source_1
+  id: pad_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: in
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_streams: '1'
+    optional: 'False'
+    type: message
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2600, 568.0]
+    rotation: 0
+    state: enabled
+- name: samp_per_sym
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: ''
+    short_id: ''
+    type: ''
+    value: '2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [496, 20.0]
+    rotation: 0
+    state: enabled
+- name: satellites_rms_agc_1
+  id: satellites_rms_agc
+  parameters:
+    affinity: ''
+    alias: ''
+    alpha: agc_alpha
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    reference: agc_ref
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1888, 476.0]
+    rotation: 0
+    state: enabled
+- name: step_sz
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Lin EQ Step Size
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2832, 88.0]
+    rotation: 0
+    state: enabled
+- name: swidx
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Switch Index (1 for 16 else 0)
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2840, 300.0]
+    rotation: 0
+    state: enabled
+- name: ted_gain
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: TED Gain
+    short_id: ''
+    type: ''
+    value: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3552, 616.0]
+    rotation: 0
+    state: enabled
+- name: timing_bw
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Timing Bandwidth
+    short_id: ''
+    type: ''
+    value: '0.045'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2704, 240.0]
+    rotation: 0
+    state: enabled
+- name: timing_damping
+  id: parameter
+  parameters:
+    alias: ''
+    comment: ''
+    hide: none
+    label: Timing Damping
+    short_id: ''
+    type: ''
+    value: '2'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2464, 276.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [blocks_unpacked_to_packed_xx_0, '0', pad_sink_2, '0']
+- [digital_constellation_receiver_cb_0_0, '0', digital_diff_decoder_bb_0_1, '0']
+- [digital_constellation_receiver_cb_0_0, '1', blocks_null_sink_1, '0']
+- [digital_constellation_receiver_cb_0_0, '2', blocks_null_sink_1, '1']
+- [digital_constellation_receiver_cb_0_0, '3', blocks_null_sink_1, '2']
+- [digital_constellation_receiver_cb_0_0, '4', pad_sink_3, '0']
+- [digital_diff_decoder_bb_0_1, '0', blocks_unpacked_to_packed_xx_0, '0']
+- [digital_symbol_sync_xx_0_0, '0', digital_constellation_receiver_cb_0_0, '0']
+- [pad_source_0, '0', satellites_rms_agc_1, '0']
+- [pad_source_1, out, digital_constellation_receiver_cb_0_0, rotate_phase]
+- [satellites_rms_agc_1, '0', digital_symbol_sync_xx_0_0, '0']
+- [satellites_rms_agc_1, '0', pad_sink_0, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.10.0

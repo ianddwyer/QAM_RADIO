@@ -1,0 +1,154 @@
+options:
+  parameters:
+    author: ''
+    catch_exceptions: 'True'
+    category: '[GRC Hier Blocks]'
+    cmake_opt: ''
+    comment: ''
+    copyright: ''
+    description: ''
+    gen_cmake: 'On'
+    gen_linking: dynamic
+    generate_options: hb
+    hier_block_src_path: '.:'
+    id: print_pkt
+    max_nouts: '0'
+    output_language: python
+    placement: (0,0)
+    qt_qss_theme: ''
+    realtime_scheduling: ''
+    run: 'True'
+    run_command: '{python} -u {filename}'
+    run_options: prompt
+    sizing_mode: fixed
+    thread_safe_setters: ''
+    title: Print Filled Unicode Pkt
+    window_size: (1000,1000)
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [8, 8]
+    rotation: 0
+    state: enabled
+
+blocks:
+- name: epy_block_1
+  id: epy_block
+  parameters:
+    _source_code: "\nimport numpy as np\nfrom gnuradio import gr\nimport pmt\n\nclass\
+      \ DropByteToMessage(gr.basic_block):\n    def __init__(self, dropvalue=0xFF):\n\
+      \        gr.basic_block.__init__(\n            self,\n            name=\"Drop\
+      \ Null\",\n            in_sig=[np.uint8],   # Stream input (bytes)\n       \
+      \     out_sig=None         # Message output init will null\n        )\n    \
+      \    self.message_port_register_out(pmt.intern(\"out\"))  # Create message output\
+      \ port\n\n    def general_work(self, input_items, output_items):\n        #\
+      \ Filter out the unwanted byte\n        filtereddata = [x for x in input_items[0]\
+      \ if x != 0]\n        \n        if filtereddata:  # If there's valid data after\
+      \ filtering\n            msg = pmt.init_u8vector(len(filtereddata), filtereddata)\
+      \  # Convert to PMT message\n            self.message_port_pub(pmt.intern(\"\
+      out\"), msg)  # Send the message\n        \n        self.consume(0, len(input_items[0]))\
+      \  # Consume all input samples\n        return 0  # No output samples in streaming\
+      \ mode (only messages), not a standard zero return\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    dropvalue: '0'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('Drop Null', 'DropByteToMessage', [('dropvalue', '255')], [('0', 'byte',
+      1)], [('out', 'message', 1)], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3176, 400.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_3
+  id: epy_block
+  parameters:
+    _source_code: "from gnuradio import gr\nimport pmt\n\nclass PMTByteArrayToString(gr.basic_block):\n\
+      \    def __init__(self):\n        gr.basic_block.__init__(\n            self,\n\
+      \            name=\"Bytes to String\",\n            in_sig=None, out_sig=None\n\
+      \        )\n\n        # Register input and output message ports\n        self.message_port_register_in(pmt.intern(\"\
+      in\"))\n        self.message_port_register_out(pmt.intern(\"out\"))\n      \
+      \  self.set_msg_handler(pmt.intern(\"in\"), self.handle_msg)\n\n    def handle_msg(self,\
+      \ msg):\n\n        # ensure the input is a PMT byte vector, not a PDU\n    \
+      \    if not pmt.is_u8vector(msg): return\n\n        # convert PMT byte vector\
+      \ to a Python byte array\n        byte_array = bytearray(pmt.u8vector_elements(msg))\n\
+      \n        # convert bytes to string (UTF-8 decoding), use try for safety in\
+      \ live streaming\n        try:string_message = byte_array.decode(\"utf-8\")\n\
+      \        except UnicodeDecodeError: string_message = byte_array.decode(\"ISO-8859-1\"\
+      )  # Fallback use ISO format for compatibility\n\n        # publish the string\
+      \ as a PMT symbol (message)\n        self.message_port_pub(pmt.intern(\"out\"\
+      ), pmt.intern(string_message))\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('Bytes to String', 'PMTByteArrayToString', [], [('in', 'message',
+      1)], [('out', 'message', 1)], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3168, 456.0]
+    rotation: 0
+    state: enabled
+- name: epy_block_4
+  id: epy_block
+  parameters:
+    _source_code: "import numpy as np\nfrom gnuradio import gr\nimport pmt\nimport\
+      \ sys  \n\nclass print_message_block(gr.sync_block):\n    def __init__(self):\n\
+      \        gr.sync_block.__init__(self,\n            name=\"Print to Console\"\
+      ,\n            in_sig=None,\n            out_sig=None)  # No output signal needed\n\
+      \n        # register message input port\n        self.message_port_register_in(pmt.intern('msg_in'))\n\
+      \        self.set_msg_handler(pmt.intern('msg_in'), self.handle_msg)\n\n   \
+      \ def handle_msg(self, msg):\n        text = pmt.symbol_to_string(msg)  # convert\
+      \ PMT to string\n        print(f\"RX: {text}\")\n        sys.stdout.flush()\
+      \  # pnsure immediate print output on load, else is unreliable timing\n"
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    _io_cache: ('Print to Console', 'print_message_block', [], [('msg_in', 'message',
+      1)], [], '', [])
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [3168, 496.0]
+    rotation: 0
+    state: enabled
+- name: pad_source_0
+  id: pad_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    label: in
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    num_streams: '1'
+    optional: 'False'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [2840, 544.0]
+    rotation: 0
+    state: enabled
+
+connections:
+- [epy_block_1, out, epy_block_3, in]
+- [epy_block_3, out, epy_block_4, msg_in]
+- [pad_source_0, '0', epy_block_1, '0']
+
+metadata:
+  file_format: 1
+  grc_version: 3.10.10.0
