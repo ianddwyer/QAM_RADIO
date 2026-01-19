@@ -20,23 +20,27 @@ from gnuradio import blocks
 from gnuradio import blocks, gr
 from gnuradio import digital
 from gnuradio import filter
-from gnuradio import gr
+from gnuradio import eng_notation
 from gnuradio.filter import firdes
+from gnuradio import gr
 from gnuradio.fft import window
 import signal
 from PyQt5 import Qt
 from argparse import ArgumentParser
 from gnuradio.eng_arg import eng_float, intx
-from gnuradio import eng_notation
 from gnuradio import network
 from packetgen import packetgen  # grc-generated hier_block
 from packetread import packetread  # grc-generated hier_block
 import numpy as np
+import raw_qamradio_epy_block_0 as epy_block_0  # embedded python block
+import raw_qamradio_epy_block_0_0 as epy_block_0_0  # embedded python block
 import raw_qamradio_epy_block_5 as epy_block_5  # embedded python block
 import raw_qamradio_epy_block_6 as epy_block_6  # embedded python block
 import raw_qamradio_epy_block_7 as epy_block_7  # embedded python block
 import satellites.hier
 import sip
+import time
+import threading
 
 
 
@@ -75,37 +79,44 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         ##################################################
         # Variables
         ##################################################
-        self.psk4 = psk4 = digital.constellation_qpsk().base()
-        self.psk4.set_npwr(1)
+        self.psk4 = psk4 = digital.constellation_calcdist(np.array([-4-4j, -4+4j, 4+4j, 4-4j])/4, [0, 1, 2, 3],
+        4, 1, digital.constellation.NO_NORMALIZATION).base()
+        self.psk4.set_npwr(4)
         self.samp_rate = samp_rate = 2e6
         self.samp_per_sym = samp_per_sym = 4
         self.exbw = exbw = 1
         self.C = C = psk4
         self.symbol_rate = symbol_rate = samp_rate/samp_per_sym
+        self.success = success = 0
         self.rxmod = rxmod = digital.generic_mod(C, True, samp_per_sym, True, exbw, False, False)
         self.packet_len = packet_len = 1024
         self.message = message = 0
+        self.allpack = allpack = 0
         self.access_key = access_key = '11100001010110101110100010010011'
+        self.variable_qtgui_label_2 = variable_qtgui_label_2 = success
+        self.variable_qtgui_label_1 = variable_qtgui_label_1 = allpack
         self.umm = umm = "music/I Don't Know.wav"
         self.txgain = txgain = 60
         self.shift = shift = samp_rate/4
-        self.rxgain = rxgain = 18
-        self.rrc_taps = rrc_taps = firdes.root_raised_cosine(32, 32, 1.0/float(samp_per_sym), exbw, 11*samp_per_sym*packet_len)
+        self.rxstartflag = rxstartflag = 0
+        self.rxgain = rxgain = 20
+        self.rrc_taps = rrc_taps = firdes.root_raised_cosine(4, 4, 1.0/float(samp_per_sym), exbw, 11*samp_per_sym*4+1)
         self.random = random = 2
         self.qam8 = qam8 = digital.constellation_calcdist(np.array([-1-1j, -1+1j, 1+1j, 1-1j, -0.67j, 0.67, 0.67j, -0.67]), [0, 1, 2, 3, 4, 5 ,6 ,7],
         4, 1, digital.constellation.NO_NORMALIZATION).base()
         self.qam8.set_npwr(2)
-        self.qam64 = qam64 = digital.constellation_calcdist(np.array([-0.70711+-0.70711j, -0.50508+-0.70711j, -0.30304+-0.70711j, -0.10101+-0.70711j, 0.10101+-0.70711j, 0.30304+-0.70711j, 0.50508+-0.70711j, 0.70711+-0.70711j, -0.70711+-0.50508j, -0.50508+-0.50508j, -0.30304+-0.50508j, -0.10101+-0.50508j, 0.10101+-0.50508j, 0.30304+-0.50508j, 0.50508+-0.50508j, 0.70711+-0.50508j, -0.70711+-0.30304j, -0.50508+-0.30304j, -0.30304+-0.30304j, -0.10101+-0.30304j, 0.10101+-0.30304j, 0.30304+-0.30304j, 0.50508+-0.30304j, 0.70711+-0.30304j, -0.70711+-0.10101j, -0.50508+-0.10101j, -0.30304+-0.10101j, -0.10101+-0.10101j, 0.10101+-0.10101j, 0.30304+-0.10101j, 0.50508+-0.10101j, 0.70711+-0.10101j, -0.70711+0.10101j, -0.50508+0.10101j, -0.30304+0.10101j, -0.10101+0.10101j, 0.10101+0.10101j, 0.30304+0.10101j, 0.50508+0.10101j, 0.70711+0.10101j, -0.70711+0.30304j, -0.50508+0.30304j, -0.30304+0.30304j, -0.10101+0.30304j, 0.10101+0.30304j, 0.30304+0.30304j, 0.50508+0.30304j, 0.70711+0.30304j, -0.70711+0.50508j, -0.50508+0.50508j, -0.30304+0.50508j, -0.10101+0.50508j, 0.10101+0.50508j, 0.30304+0.50508j, 0.50508+0.50508j, 0.70711+0.50508j, -0.70711+0.70711j, -0.50508+0.70711j, -0.30304+0.70711j, -0.10101+0.70711j, 0.10101+0.70711j, 0.30304+0.70711j, 0.50508+0.70711j, 0.70711+0.70711j])/0.707, list(range(64)),
+        self.qam64 = qam64 = digital.constellation_calcdist(np.array([-0.70711+-0.70711j, -0.50508+-0.70711j, -0.30304+-0.70711j, -0.10101+-0.70711j, 0.10101+-0.70711j, 0.30304+-0.70711j, 0.50508+-0.70711j, 0.70711+-0.70711j, -0.70711+-0.50508j, -0.50508+-0.50508j, -0.30304+-0.50508j, -0.10101+-0.50508j, 0.10101+-0.50508j, 0.30304+-0.50508j, 0.50508+-0.50508j, 0.70711+-0.50508j, -0.70711+-0.30304j, -0.50508+-0.30304j, -0.30304+-0.30304j, -0.10101+-0.30304j, 0.10101+-0.30304j, 0.30304+-0.30304j, 0.50508+-0.30304j, 0.70711+-0.30304j, -0.70711+-0.10101j, -0.50508+-0.10101j, -0.30304+-0.10101j, -0.10101+-0.10101j, 0.10101+-0.10101j, 0.30304+-0.10101j, 0.50508+-0.10101j, 0.70711+-0.10101j, -0.70711+0.10101j, -0.50508+0.10101j, -0.30304+0.10101j, -0.10101+0.10101j, 0.10101+0.10101j, 0.30304+0.10101j, 0.50508+0.10101j, 0.70711+0.10101j, -0.70711+0.30304j, -0.50508+0.30304j, -0.30304+0.30304j, -0.10101+0.30304j, 0.10101+0.30304j, 0.30304+0.30304j, 0.50508+0.30304j, 0.70711+0.30304j, -0.70711+0.50508j, -0.50508+0.50508j, -0.30304+0.50508j, -0.10101+0.50508j, 0.10101+0.50508j, 0.30304+0.50508j, 0.50508+0.50508j, 0.70711+0.50508j, -0.70711+0.70711j, -0.50508+0.70711j, -0.30304+0.70711j, -0.10101+0.70711j, 0.10101+0.70711j, 0.30304+0.70711j, 0.50508+0.70711j, 0.70711+0.70711j])/0.70711, list(range(64)),
         4, 1, digital.constellation.NO_NORMALIZATION).base()
-        self.qam64.set_npwr(2)
+        self.qam64.set_npwr(4)
         self.qam16 = qam16 = digital.constellation_16qam().base()
-        self.qam16.set_npwr(2)
+        self.qam16.set_npwr(4)
         self.psk8 = psk8 = digital.constellation_8psk().base()
         self.psk8.set_npwr(2)
         self.psk2 = psk2 = digital.constellation_calcdist(np.array([-1, 1]), [0, 1],
         4, 1, digital.constellation.NO_NORMALIZATION).base()
         self.psk2.set_npwr(2)
         self.ppm = ppm = 0.3
+        self.port_rate = port_rate = samp_rate/samp_per_sym/8*C.bits_per_symbol()*packet_len/(packet_len+12)
         self.port = port = 5005
         self.nfilt = nfilt = 512
         self.next_episode = next_episode = "music/Dr. Dre - The Next Episode (Wooli Flip).wav"
@@ -115,15 +126,72 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         self.hunter = hunter = "music/Subtronics x Flowdan - Hunter.wav"
         self.hdr_format = hdr_format = digital.header_format_default(access_key, 0)
         self.final_breath = final_breath = "music/Final Breath.wav"
-        self.device_rate = device_rate = 44100
+        self.device_rate = device_rate = 100000
+        self.delay = delay = 190
         self.centerf = centerf = 0.912e9
         self.bandwidth = bandwidth = symbol_rate*(1+exbw)
-        self.aa = aa = digital.adaptive_algorithm_cma( C, 0.0005, C.arity()).base()
+        self.aa = aa = digital.adaptive_algorithm_cma( C, 0.001, C.arity()).base()
 
         ##################################################
         # Blocks
         ##################################################
 
+        self.rx_start_flag = blocks.probe_signal_f()
+        def _rxstartflag_probe():
+          while True:
+
+            val = self.rx_start_flag.level()
+            try:
+              try:
+                self.doc.add_next_tick_callback(functools.partial(self.set_rxstartflag,val))
+              except AttributeError:
+                self.set_rxstartflag(val)
+            except AttributeError:
+              pass
+            time.sleep(1.0 / (1000))
+        _rxstartflag_thread = threading.Thread(target=_rxstartflag_probe)
+        _rxstartflag_thread.daemon = True
+        _rxstartflag_thread.start()
+        self._ppm_range = qtgui.Range(-10, 10, 0.1, 0.3, (20*10))
+        self._ppm_win = qtgui.RangeWidget(self._ppm_range, self.set_ppm, "Tune PPM", "counter", float, QtCore.Qt.Horizontal)
+        self.top_grid_layout.addWidget(self._ppm_win, 1, 1, 1, 1)
+        for r in range(1, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(1, 2):
+            self.top_grid_layout.setColumnStretch(c, 1)
+        self._delay_range = qtgui.Range(0, samp_rate/2, 1, 190, 200)
+        self._delay_win = qtgui.RangeWidget(self._delay_range, self.set_delay, "'delay'", "counter_slider", float, QtCore.Qt.Horizontal)
+        self.top_layout.addWidget(self._delay_win)
+        self._variable_qtgui_label_2_tool_bar = Qt.QToolBar(self)
+
+        if None:
+            self._variable_qtgui_label_2_formatter = None
+        else:
+            self._variable_qtgui_label_2_formatter = lambda x: eng_notation.num_to_str(x)
+
+        self._variable_qtgui_label_2_tool_bar.addWidget(Qt.QLabel("Success Packets: "))
+        self._variable_qtgui_label_2_label = Qt.QLabel(str(self._variable_qtgui_label_2_formatter(self.variable_qtgui_label_2)))
+        self._variable_qtgui_label_2_tool_bar.addWidget(self._variable_qtgui_label_2_label)
+        self.top_grid_layout.addWidget(self._variable_qtgui_label_2_tool_bar, 0, 0, 1, 1)
+        for r in range(0, 1):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(0, 1):
+            self.top_grid_layout.setColumnStretch(c, 1)
+        self._variable_qtgui_label_1_tool_bar = Qt.QToolBar(self)
+
+        if None:
+            self._variable_qtgui_label_1_formatter = None
+        else:
+            self._variable_qtgui_label_1_formatter = lambda x: eng_notation.num_to_str(x)
+
+        self._variable_qtgui_label_1_tool_bar.addWidget(Qt.QLabel("Total Packets: "))
+        self._variable_qtgui_label_1_label = Qt.QLabel(str(self._variable_qtgui_label_1_formatter(self.variable_qtgui_label_1)))
+        self._variable_qtgui_label_1_tool_bar.addWidget(self._variable_qtgui_label_1_label)
+        self.top_grid_layout.addWidget(self._variable_qtgui_label_1_tool_bar, 1, 0, 1, 1)
+        for r in range(1, 2):
+            self.top_grid_layout.setRowStretch(r, 1)
+        for c in range(0, 1):
+            self.top_grid_layout.setColumnStretch(c, 1)
         self._txgain_range = qtgui.Range(0, 60, 1, 60, 8)
         self._txgain_win = qtgui.RangeWidget(self._txgain_range, self.set_txgain, "Transmit Gain", "counter", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._txgain_win, 2, 1, 1, 1)
@@ -131,14 +199,91 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(1, 2):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self.satellites_rms_agc_1 = satellites.hier.rms_agc(alpha=0.00001, reference=0.9)
-        self._rxgain_range = qtgui.Range(7, 40, 1, 18, 8)
+        self.successpackets = blocks.probe_signal_f()
+        def _success_probe():
+          while True:
+
+            val = self.successpackets.level()
+            try:
+              try:
+                self.doc.add_next_tick_callback(functools.partial(self.set_success,val))
+              except AttributeError:
+                self.set_success(val)
+            except AttributeError:
+              pass
+            time.sleep(1.0 / (1000))
+        _success_thread = threading.Thread(target=_success_probe)
+        _success_thread.daemon = True
+        _success_thread.start()
+        self.satellites_rms_agc_1_0 = satellites.hier.rms_agc(alpha=0.000001, reference=0.925)
+        self.satellites_rms_agc_1 = satellites.hier.rms_agc(alpha=0.000001, reference=0.925)
+        self.satellites_rms_agc_0_0 = satellites.hier.rms_agc(alpha=0.001, reference=0.925)
+        self.satellites_rms_agc_0 = satellites.hier.rms_agc(alpha=0.001, reference=0.925)
+        self._rxgain_range = qtgui.Range(7, 40, 1, 20, 8)
         self._rxgain_win = qtgui.RangeWidget(self._rxgain_range, self.set_rxgain, "Receive Gain", "counter", float, QtCore.Qt.Horizontal)
         self.top_grid_layout.addWidget(self._rxgain_win, 0, 1, 1, 1)
         for r in range(0, 1):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(1, 2):
             self.top_grid_layout.setColumnStretch(c, 1)
+        self.rational_resampler_xxx_1 = filter.rational_resampler_fff(
+                interpolation=int(device_rate),
+                decimation=(int(samp_rate/samp_per_sym/8*C.bits_per_symbol()*packet_len/(packet_len+12)/2)),
+                taps=[1],
+                fractional_bw=0)
+        self.rational_resampler_xxx_0 = filter.rational_resampler_fff(
+                interpolation=(int(samp_rate/samp_per_sym/8*C.bits_per_symbol()*packet_len/(packet_len+12)/2)),
+                decimation=device_rate,
+                taps=[1],
+                fractional_bw=0)
+        self.qtgui_time_sink_x_2 = qtgui.time_sink_f(
+            1024, #size
+            samp_rate, #samp_rate
+            "", #name
+            2, #number of inputs
+            None # parent
+        )
+        self.qtgui_time_sink_x_2.set_update_time(0.10)
+        self.qtgui_time_sink_x_2.set_y_axis(-1, 1)
+
+        self.qtgui_time_sink_x_2.set_y_label('Amplitude', "")
+
+        self.qtgui_time_sink_x_2.enable_tags(True)
+        self.qtgui_time_sink_x_2.set_trigger_mode(qtgui.TRIG_MODE_FREE, qtgui.TRIG_SLOPE_POS, 0.0, 0, 0, "")
+        self.qtgui_time_sink_x_2.enable_autoscale(False)
+        self.qtgui_time_sink_x_2.enable_grid(False)
+        self.qtgui_time_sink_x_2.enable_axis_labels(True)
+        self.qtgui_time_sink_x_2.enable_control_panel(True)
+        self.qtgui_time_sink_x_2.enable_stem_plot(False)
+
+
+        labels = ['Signal 1', 'Signal 2', 'Signal 3', 'Signal 4', 'Signal 5',
+            'Signal 6', 'Signal 7', 'Signal 8', 'Signal 9', 'Signal 10']
+        widths = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        colors = ['blue', 'red', 'green', 'black', 'cyan',
+            'magenta', 'yellow', 'dark red', 'dark green', 'dark blue']
+        alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
+            1.0, 1.0, 1.0, 1.0, 1.0]
+        styles = [1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1]
+        markers = [-1, -1, -1, -1, -1,
+            -1, -1, -1, -1, -1]
+
+
+        for i in range(2):
+            if len(labels[i]) == 0:
+                self.qtgui_time_sink_x_2.set_line_label(i, "Data {0}".format(i))
+            else:
+                self.qtgui_time_sink_x_2.set_line_label(i, labels[i])
+            self.qtgui_time_sink_x_2.set_line_width(i, widths[i])
+            self.qtgui_time_sink_x_2.set_line_color(i, colors[i])
+            self.qtgui_time_sink_x_2.set_line_style(i, styles[i])
+            self.qtgui_time_sink_x_2.set_line_marker(i, markers[i])
+            self.qtgui_time_sink_x_2.set_line_alpha(i, alphas[i])
+
+        self._qtgui_time_sink_x_2_win = sip.wrapinstance(self.qtgui_time_sink_x_2.qwidget(), Qt.QWidget)
+        self.top_layout.addWidget(self._qtgui_time_sink_x_2_win)
         self.qtgui_freq_sink_x_0_1 = qtgui.freq_sink_c(
             4096, #size
             window.WIN_BLACKMAN_hARRIS, #wintype
@@ -149,7 +294,7 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
             None # parent
         )
         self.qtgui_freq_sink_x_0_1.set_update_time(0.05)
-        self.qtgui_freq_sink_x_0_1.set_y_axis((-80), (-20))
+        self.qtgui_freq_sink_x_0_1.set_y_axis((-150), (-20))
         self.qtgui_freq_sink_x_0_1.set_y_label('Relative Gain', 'dB')
         self.qtgui_freq_sink_x_0_1.set_trigger_mode(qtgui.TRIG_MODE_FREE, 0.0, 0, "")
         self.qtgui_freq_sink_x_0_1.enable_autoscale(False)
@@ -239,7 +384,7 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         self.qtgui_const_sink_x_0 = qtgui.const_sink_c(
             (1024*C.bits_per_symbol()), #size
             "", #name
-            1, #number of inputs
+            2, #number of inputs
             None # parent
         )
         self.qtgui_const_sink_x_0.set_update_time(0.1)
@@ -264,7 +409,7 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         alphas = [1.0, 1.0, 1.0, 1.0, 1.0,
             1.0, 1.0, 1.0, 1.0, 1.0]
 
-        for i in range(1):
+        for i in range(2):
             if len(labels[i]) == 0:
                 self.qtgui_const_sink_x_0.set_line_label(i, "Data {0}".format(i))
             else:
@@ -281,13 +426,6 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
             self.top_grid_layout.setRowStretch(r, 1)
         for c in range(0, 1):
             self.top_grid_layout.setColumnStretch(c, 1)
-        self._ppm_range = qtgui.Range(-10, 10, 0.1, 0.3, (20*10))
-        self._ppm_win = qtgui.RangeWidget(self._ppm_range, self.set_ppm, "Tune PPM", "counter", float, QtCore.Qt.Horizontal)
-        self.top_grid_layout.addWidget(self._ppm_win, 1, 1, 1, 1)
-        for r in range(1, 2):
-            self.top_grid_layout.setRowStretch(r, 1)
-        for c in range(1, 2):
-            self.top_grid_layout.setColumnStretch(c, 1)
         self.packetread_0 = packetread(
             access_key=access_key,
             packet_len=packet_len,
@@ -300,28 +438,46 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
             packet_len_tagn="packet_len",
         )
         self.packetgen_0.set_max_output_buffer(int(2e6))
-        self.network_udp_source_1 = network.udp_source(gr.sizeof_char, 1, 5006, 0, (packet_len*32), True, True, False)
-        self.network_udp_source_1.set_max_output_buffer(int(2e6))
-        self.network_udp_sink_0 = network.udp_sink(gr.sizeof_char, 1, '127.0.0.1', 5007, 0, packet_len, False)
+        self.network_udp_source_1_0 = network.udp_source(gr.sizeof_float, 1, 5006, 0, packet_len, True, True, False)
+        self.network_udp_source_1_0.set_max_output_buffer(int(2e6))
+        self.network_udp_sink_0 = network.udp_sink(gr.sizeof_float, 1, '127.0.0.1', 5007, 0, packet_len, False)
         self.epy_block_7 = epy_block_7.blk(timeout=0.25)
         self.epy_block_6 = epy_block_6.blk(filename="snr.txt")
         self.epy_block_5 = epy_block_5.blk(fft_size=1024, avg_frames_base2=64, sample_rate=samp_rate, symbol_rate=samp_rate/samp_per_sym, excess_bw=exbw, report_interval=1)
         self.epy_block_5.set_max_output_buffer(int(2e6))
-        self.digital_symbol_sync_xx_0_0 = digital.symbol_sync_cc(
+        self.epy_block_0_0 = epy_block_0_0.tag_counter_block(rxflag=rxstartflag)
+        self.epy_block_0_0.set_max_output_buffer(int(2e6))
+        self.epy_block_0 = epy_block_0.tag_counter_block()
+        self.epy_block_0.set_max_output_buffer(int(2e6))
+        self.digital_symbol_sync_xx_0_0_0 = digital.symbol_sync_cc(
             digital.TED_SIGNAL_TIMES_SLOPE_ML,
             samp_per_sym,
-            0.5,
-            2,
+            1,
+            0.1,
             2,
             0,
             1,
             C,
             digital.IR_PFB_MF,
-            32,
+            4,
             rrc_taps)
+        self.digital_symbol_sync_xx_0_0 = digital.symbol_sync_cc(
+            digital.TED_SIGNAL_TIMES_SLOPE_ML,
+            samp_per_sym,
+            1,
+            0.1,
+            2,
+            0,
+            1,
+            C,
+            digital.IR_PFB_MF,
+            4,
+            rrc_taps)
+        self.digital_linear_equalizer_0_0 = digital.linear_equalizer(1, 1, aa, True, [ ], 'corr_est')
         self.digital_linear_equalizer_0 = digital.linear_equalizer(1, 1, aa, True, [ ], 'corr_est')
         self.digital_diff_decoder_bb_0_1 = digital.diff_decoder_bb(C.arity(), digital.DIFF_DIFFERENTIAL)
-        self.digital_constellation_receiver_cb_0_0 = digital.constellation_receiver_cb(C, (0.0628/4), (-5000), 5000)
+        self.digital_constellation_receiver_cb_0_0_1 = digital.constellation_receiver_cb(C, (0.0628/4), (-ppm*centerf/1e6*2), (ppm*centerf/1e6*2))
+        self.digital_constellation_receiver_cb_0_0 = digital.constellation_receiver_cb(C, (0.0628/4), (-ppm*centerf/1e6*2), (ppm*centerf/1e6*2))
         self.digital_constellation_modulator_0 = digital.generic_mod(
             constellation=C,
             differential=True,
@@ -333,44 +489,111 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
             truncate=True)
         self.digital_constellation_modulator_0.set_max_output_buffer(int(2e6))
         self.blocks_unpacked_to_packed_xx_0 = blocks.unpacked_to_packed_bb(C.bits_per_symbol(), gr.GR_MSB_FIRST)
+        self.blocks_throttle2_0_1 = blocks.throttle( gr.sizeof_gr_complex*1, samp_rate, True, 0 if "auto" == "auto" else max( int(float(0.1) * samp_rate) if "auto" == "time" else int(0.1), 1) )
+        self.blocks_threshold_ff_0 = blocks.threshold_ff(0, 1, 0)
+        self.blocks_probe_rate_1_0 = blocks.probe_rate(gr.sizeof_float*1, 2000, 0.15, '')
+        self.blocks_probe_rate_1_0.set_max_output_buffer(int(2e6))
         self.blocks_probe_rate_1 = blocks.probe_rate(gr.sizeof_char*1, 2000, 0.15, '')
         self.blocks_probe_rate_1.set_max_output_buffer(int(2e6))
+        self.blocks_null_sink_2 = blocks.null_sink(gr.sizeof_char*1)
+        self.blocks_null_sink_1_0_0 = blocks.null_sink(gr.sizeof_float*1)
         self.blocks_null_sink_1_0 = blocks.null_sink(gr.sizeof_float*1)
         self.blocks_null_sink_1 = blocks.null_sink(gr.sizeof_char*1)
-        self.blocks_multiply_const_vxx_3 = blocks.multiply_const_cc(0.25*2*1.414)
+        self.blocks_null_sink_0 = blocks.null_sink(gr.sizeof_char*1)
         self.blocks_multiply_const_vxx_2 = blocks.multiply_const_cc(0.5)
+        self.blocks_multiply_const_vxx_1 = blocks.multiply_const_ff((1/128))
+        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_ff(128)
+        self.blocks_message_debug_1_0 = blocks.message_debug(True, gr.log_levels.info)
         self.blocks_message_debug_1 = blocks.message_debug(True, gr.log_levels.info)
+        self.blocks_float_to_char_0_0 = blocks.float_to_char(1, 1)
+        self.blocks_file_sink_0_0_0 = blocks.file_sink(gr.sizeof_float*1, 'successpktcount.bin', False)
+        self.blocks_file_sink_0_0_0.set_unbuffered(False)
+        self.blocks_file_sink_0_0 = blocks.file_sink(gr.sizeof_float*1, 'totalpktcount.bin', False)
+        self.blocks_file_sink_0_0.set_unbuffered(False)
+        self.blocks_delay_0 = blocks.delay(gr.sizeof_float*1, delay)
+        self.blocks_char_to_float_7_0 = blocks.char_to_float(1, 1)
+        self.blocks_char_to_float_7 = blocks.char_to_float(1, 1)
+        self.blocks_char_to_float_0 = blocks.char_to_float(1, 1)
+        self.allpackets = blocks.probe_signal_f()
+        def _allpack_probe():
+          while True:
+
+            val = self.allpackets.level()
+            try:
+              try:
+                self.doc.add_next_tick_callback(functools.partial(self.set_allpack,val))
+              except AttributeError:
+                self.set_allpack(val)
+            except AttributeError:
+              pass
+            time.sleep(1.0 / (1000))
+        _allpack_thread = threading.Thread(target=_allpack_probe)
+        _allpack_thread.daemon = True
+        _allpack_thread.start()
 
 
         ##################################################
         # Connections
         ##################################################
         self.msg_connect((self.blocks_probe_rate_1, 'rate'), (self.blocks_message_debug_1, 'print'))
+        self.msg_connect((self.blocks_probe_rate_1_0, 'rate'), (self.blocks_message_debug_1_0, 'print'))
         self.msg_connect((self.epy_block_5, 'snr_out'), (self.epy_block_6, 'in'))
         self.msg_connect((self.epy_block_7, 'phase_cmd'), (self.digital_constellation_receiver_cb_0_0, 'rotate_phase'))
-        self.connect((self.blocks_multiply_const_vxx_2, 0), (self.qtgui_freq_sink_x_0_1, 1))
-        self.connect((self.blocks_multiply_const_vxx_2, 0), (self.satellites_rms_agc_1, 0))
-        self.connect((self.blocks_multiply_const_vxx_3, 0), (self.digital_constellation_receiver_cb_0_0, 0))
-        self.connect((self.blocks_unpacked_to_packed_xx_0, 0), (self.blocks_probe_rate_1, 0))
+        self.connect((self.blocks_char_to_float_0, 0), (self.blocks_multiply_const_vxx_1, 0))
+        self.connect((self.blocks_char_to_float_7, 0), (self.epy_block_0, 0))
+        self.connect((self.blocks_char_to_float_7_0, 0), (self.epy_block_0_0, 0))
+        self.connect((self.blocks_delay_0, 0), (self.qtgui_time_sink_x_2, 1))
+        self.connect((self.blocks_float_to_char_0_0, 0), (self.packetgen_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.blocks_float_to_char_0_0, 0))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.qtgui_time_sink_x_2, 0))
+        self.connect((self.blocks_multiply_const_vxx_1, 0), (self.rational_resampler_xxx_1, 0))
+        self.connect((self.blocks_multiply_const_vxx_2, 0), (self.blocks_throttle2_0_1, 0))
+        self.connect((self.blocks_threshold_ff_0, 0), (self.rx_start_flag, 0))
+        self.connect((self.blocks_throttle2_0_1, 0), (self.satellites_rms_agc_1, 0))
         self.connect((self.blocks_unpacked_to_packed_xx_0, 0), (self.packetread_0, 0))
         self.connect((self.digital_constellation_modulator_0, 0), (self.blocks_multiply_const_vxx_2, 0))
+        self.connect((self.digital_constellation_modulator_0, 0), (self.qtgui_freq_sink_x_0_1, 1))
+        self.connect((self.digital_constellation_modulator_0, 0), (self.satellites_rms_agc_1_0, 0))
         self.connect((self.digital_constellation_receiver_cb_0_0, 3), (self.blocks_null_sink_1_0, 2))
         self.connect((self.digital_constellation_receiver_cb_0_0, 2), (self.blocks_null_sink_1_0, 1))
         self.connect((self.digital_constellation_receiver_cb_0_0, 1), (self.blocks_null_sink_1_0, 0))
         self.connect((self.digital_constellation_receiver_cb_0_0, 0), (self.digital_diff_decoder_bb_0_1, 0))
         self.connect((self.digital_constellation_receiver_cb_0_0, 4), (self.qtgui_const_sink_x_0, 0))
+        self.connect((self.digital_constellation_receiver_cb_0_0_1, 0), (self.blocks_null_sink_0, 0))
+        self.connect((self.digital_constellation_receiver_cb_0_0_1, 3), (self.blocks_null_sink_1_0_0, 2))
+        self.connect((self.digital_constellation_receiver_cb_0_0_1, 1), (self.blocks_null_sink_1_0_0, 0))
+        self.connect((self.digital_constellation_receiver_cb_0_0_1, 2), (self.blocks_null_sink_1_0_0, 1))
+        self.connect((self.digital_constellation_receiver_cb_0_0_1, 4), (self.qtgui_const_sink_x_0, 1))
         self.connect((self.digital_diff_decoder_bb_0_1, 0), (self.blocks_unpacked_to_packed_xx_0, 0))
-        self.connect((self.digital_linear_equalizer_0, 0), (self.blocks_multiply_const_vxx_3, 0))
+        self.connect((self.digital_linear_equalizer_0, 0), (self.satellites_rms_agc_0, 0))
+        self.connect((self.digital_linear_equalizer_0_0, 0), (self.satellites_rms_agc_0_0, 0))
         self.connect((self.digital_symbol_sync_xx_0_0, 0), (self.digital_linear_equalizer_0, 0))
+        self.connect((self.digital_symbol_sync_xx_0_0_0, 0), (self.digital_linear_equalizer_0_0, 0))
+        self.connect((self.epy_block_0, 0), (self.blocks_file_sink_0_0_0, 0))
+        self.connect((self.epy_block_0, 0), (self.blocks_threshold_ff_0, 0))
+        self.connect((self.epy_block_0, 0), (self.successpackets, 0))
+        self.connect((self.epy_block_0_0, 0), (self.allpackets, 0))
+        self.connect((self.epy_block_0_0, 0), (self.blocks_file_sink_0_0, 0))
         self.connect((self.epy_block_7, 0), (self.blocks_null_sink_1, 0))
-        self.connect((self.network_udp_source_1, 0), (self.packetgen_0, 0))
+        self.connect((self.network_udp_source_1_0, 0), (self.blocks_delay_0, 0))
+        self.connect((self.network_udp_source_1_0, 0), (self.rational_resampler_xxx_0, 0))
+        self.connect((self.packetgen_0, 0), (self.blocks_char_to_float_7_0, 0))
         self.connect((self.packetgen_0, 0), (self.digital_constellation_modulator_0, 0))
+        self.connect((self.packetread_0, 0), (self.blocks_char_to_float_0, 0))
+        self.connect((self.packetread_0, 0), (self.blocks_char_to_float_7, 0))
+        self.connect((self.packetread_0, 0), (self.blocks_null_sink_2, 0))
+        self.connect((self.packetread_0, 0), (self.blocks_probe_rate_1, 0))
         self.connect((self.packetread_0, 0), (self.epy_block_7, 0))
-        self.connect((self.packetread_0, 0), (self.network_udp_sink_0, 0))
+        self.connect((self.rational_resampler_xxx_0, 0), (self.blocks_multiply_const_vxx_0, 0))
+        self.connect((self.rational_resampler_xxx_1, 0), (self.blocks_probe_rate_1_0, 0))
+        self.connect((self.rational_resampler_xxx_1, 0), (self.network_udp_sink_0, 0))
+        self.connect((self.satellites_rms_agc_0, 0), (self.digital_constellation_receiver_cb_0_0, 0))
+        self.connect((self.satellites_rms_agc_0_0, 0), (self.digital_constellation_receiver_cb_0_0_1, 0))
         self.connect((self.satellites_rms_agc_1, 0), (self.digital_symbol_sync_xx_0_0, 0))
         self.connect((self.satellites_rms_agc_1, 0), (self.epy_block_5, 0))
         self.connect((self.satellites_rms_agc_1, 0), (self.qtgui_eye_sink_x_0, 0))
         self.connect((self.satellites_rms_agc_1, 0), (self.qtgui_freq_sink_x_0_1, 0))
+        self.connect((self.satellites_rms_agc_1_0, 0), (self.digital_symbol_sync_xx_0_0_0, 0))
 
 
     def closeEvent(self, event):
@@ -393,22 +616,27 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
 
     def set_samp_rate(self, samp_rate):
         self.samp_rate = samp_rate
+        self.set_port_rate(self.samp_rate/self.samp_per_sym/8*C.bits_per_symbol()*self.packet_len/(self.packet_len+12))
         self.set_shift(self.samp_rate/4)
         self.set_symbol_rate(self.samp_rate/self.samp_per_sym)
+        self.blocks_throttle2_0_1.set_sample_rate(self.samp_rate)
         self.epy_block_5.sample_rate = self.samp_rate
         self.epy_block_5.symbol_rate = self.samp_rate/self.samp_per_sym
         self.qtgui_eye_sink_x_0.set_samp_rate(self.samp_rate/self.samp_per_sym)
         self.qtgui_freq_sink_x_0_1.set_frequency_range(self.centerf, self.samp_rate)
+        self.qtgui_time_sink_x_2.set_samp_rate(self.samp_rate)
 
     def get_samp_per_sym(self):
         return self.samp_per_sym
 
     def set_samp_per_sym(self, samp_per_sym):
         self.samp_per_sym = samp_per_sym
-        self.set_rrc_taps(firdes.root_raised_cosine(32, 32, 1.0/float(self.samp_per_sym), self.exbw, 11*self.samp_per_sym*self.packet_len))
+        self.set_port_rate(self.samp_rate/self.samp_per_sym/8*C.bits_per_symbol()*self.packet_len/(self.packet_len+12))
+        self.set_rrc_taps(firdes.root_raised_cosine(4, 4, 1.0/float(self.samp_per_sym), self.exbw, 11*self.samp_per_sym*4+1))
         self.set_rxmod(digital.generic_mod(self.C, True, self.samp_per_sym, True, self.exbw, False, False))
         self.set_symbol_rate(self.samp_rate/self.samp_per_sym)
         self.digital_symbol_sync_xx_0_0.set_sps(self.samp_per_sym)
+        self.digital_symbol_sync_xx_0_0_0.set_sps(self.samp_per_sym)
         self.epy_block_5.symbol_rate = self.samp_rate/self.samp_per_sym
         self.qtgui_eye_sink_x_0.set_samp_rate(self.samp_rate/self.samp_per_sym)
 
@@ -418,7 +646,7 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
     def set_exbw(self, exbw):
         self.exbw = exbw
         self.set_bandwidth(self.symbol_rate*(1+self.exbw))
-        self.set_rrc_taps(firdes.root_raised_cosine(32, 32, 1.0/float(self.samp_per_sym), self.exbw, 11*self.samp_per_sym*self.packet_len))
+        self.set_rrc_taps(firdes.root_raised_cosine(4, 4, 1.0/float(self.samp_per_sym), self.exbw, 11*self.samp_per_sym*4+1))
         self.set_rxmod(digital.generic_mod(self.C, True, self.samp_per_sym, True, self.exbw, False, False))
         self.epy_block_5.excess_bw = self.exbw
 
@@ -436,6 +664,13 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         self.symbol_rate = symbol_rate
         self.set_bandwidth(self.symbol_rate*(1+self.exbw))
 
+    def get_success(self):
+        return self.success
+
+    def set_success(self, success):
+        self.success = success
+        self.set_variable_qtgui_label_2(self.success)
+
     def get_rxmod(self):
         return self.rxmod
 
@@ -447,7 +682,7 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
 
     def set_packet_len(self, packet_len):
         self.packet_len = packet_len
-        self.set_rrc_taps(firdes.root_raised_cosine(32, 32, 1.0/float(self.samp_per_sym), self.exbw, 11*self.samp_per_sym*self.packet_len))
+        self.set_port_rate(self.samp_rate/self.samp_per_sym/8*C.bits_per_symbol()*self.packet_len/(self.packet_len+12))
         self.packetgen_0.set_packet_len(self.packet_len)
         self.packetread_0.set_packet_len(self.packet_len)
 
@@ -458,6 +693,13 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         self.message = message
         self.set_inputtype_sel(self.message)
 
+    def get_allpack(self):
+        return self.allpack
+
+    def set_allpack(self, allpack):
+        self.allpack = allpack
+        self.set_variable_qtgui_label_1(self.allpack)
+
     def get_access_key(self):
         return self.access_key
 
@@ -466,6 +708,20 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
         self.set_hdr_format(digital.header_format_default(self.access_key, 0))
         self.packetgen_0.set_access_key(self.access_key)
         self.packetread_0.set_access_key(self.access_key)
+
+    def get_variable_qtgui_label_2(self):
+        return self.variable_qtgui_label_2
+
+    def set_variable_qtgui_label_2(self, variable_qtgui_label_2):
+        self.variable_qtgui_label_2 = variable_qtgui_label_2
+        Qt.QMetaObject.invokeMethod(self._variable_qtgui_label_2_label, "setText", Qt.Q_ARG("QString", str(self._variable_qtgui_label_2_formatter(self.variable_qtgui_label_2))))
+
+    def get_variable_qtgui_label_1(self):
+        return self.variable_qtgui_label_1
+
+    def set_variable_qtgui_label_1(self, variable_qtgui_label_1):
+        self.variable_qtgui_label_1 = variable_qtgui_label_1
+        Qt.QMetaObject.invokeMethod(self._variable_qtgui_label_1_label, "setText", Qt.Q_ARG("QString", str(self._variable_qtgui_label_1_formatter(self.variable_qtgui_label_1))))
 
     def get_umm(self):
         return self.umm
@@ -484,6 +740,13 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
 
     def set_shift(self, shift):
         self.shift = shift
+
+    def get_rxstartflag(self):
+        return self.rxstartflag
+
+    def set_rxstartflag(self, rxstartflag):
+        self.rxstartflag = rxstartflag
+        self.epy_block_0_0.rxflag = self.rxstartflag
 
     def get_rxgain(self):
         return self.rxgain
@@ -538,6 +801,12 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
 
     def set_ppm(self, ppm):
         self.ppm = ppm
+
+    def get_port_rate(self):
+        return self.port_rate
+
+    def set_port_rate(self, port_rate):
+        self.port_rate = port_rate
 
     def get_port(self):
         return self.port
@@ -598,6 +867,13 @@ class raw_qamradio(gr.top_block, Qt.QWidget):
 
     def set_device_rate(self, device_rate):
         self.device_rate = device_rate
+
+    def get_delay(self):
+        return self.delay
+
+    def set_delay(self, delay):
+        self.delay = delay
+        self.blocks_delay_0.set_dly(int(self.delay))
 
     def get_centerf(self):
         return self.centerf
