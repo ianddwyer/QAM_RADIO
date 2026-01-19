@@ -11,15 +11,15 @@ options:
     gen_linking: dynamic
     generate_options: qt_gui
     hier_block_src_path: '.:'
-    id: test
+    id: untitled
     max_nouts: '0'
     output_language: python
     placement: (0,0)
     qt_qss_theme: ''
-    realtime_scheduling: ''
+    realtime_scheduling: '1'
     run: 'True'
     run_command: '{python} -u {filename}'
-    run_options: prompt
+    run_options: run
     sizing_mode: fixed
     thread_safe_setters: ''
     title: Not titled yet
@@ -28,38 +28,54 @@ options:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [8, 8]
+    coordinate: [0, 8.0]
     rotation: 0
     state: enabled
 
 blocks:
+- name: delay
+  id: variable_qtgui_range
+  parameters:
+    comment: ''
+    gui_hint: ''
+    label: delay
+    min_len: '200'
+    orient: QtCore.Qt.Horizontal
+    rangeType: int
+    start: '0'
+    step: '1'
+    stop: '100'
+    value: '0'
+    widget: counter
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1000, 248.0]
+    rotation: 0
+    state: enabled
+- name: device_rate
+  id: variable
+  parameters:
+    comment: ''
+    value: 100e3
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [304, 12.0]
+    rotation: 0
+    state: enabled
 - name: samp_rate
   id: variable
   parameters:
     comment: ''
-    value: 48e3
+    value: 2e6
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
     coordinate: [200, 12]
-    rotation: 0
-    state: enabled
-- name: audio_sink_0
-  id: audio_sink
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    device_name: ''
-    num_inputs: '1'
-    ok_to_block: 'True'
-    samp_rate: '48000'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [976, 264.0]
     rotation: 0
     state: enabled
 - name: blocks_char_to_float_0
@@ -76,7 +92,24 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [576, 240.0]
+    coordinate: [1568, 896.0]
+    rotation: 0
+    state: enabled
+- name: blocks_char_to_float_0_0
+  id: blocks_char_to_float
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    scale: '1'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [832, 904.0]
     rotation: 0
     state: enabled
 - name: blocks_float_to_char_0
@@ -93,10 +126,27 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [336, 264.0]
+    coordinate: [1392, 904.0]
     rotation: 0
     state: enabled
-- name: blocks_message_debug_0
+- name: blocks_float_to_char_0_0
+  id: blocks_float_to_char
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    scale: '1'
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1928, 896.0]
+    rotation: 0
+    state: enabled
+- name: blocks_message_debug_1
   id: blocks_message_debug
   parameters:
     affinity: ''
@@ -108,81 +158,91 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [896, 488.0]
+    coordinate: [1456, 1056.0]
     rotation: 0
     state: enabled
-- name: blocks_multiply_const_vxx_0
-  id: blocks_multiply_const_vxx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    const: '127'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    type: float
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [264, 376.0]
-    rotation: 0
-    state: enabled
-- name: blocks_multiply_const_vxx_0_0
-  id: blocks_multiply_const_vxx
-  parameters:
-    affinity: ''
-    alias: ''
-    comment: ''
-    const: 1/127
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    type: float
-    vlen: '1'
-  states:
-    bus_sink: false
-    bus_source: false
-    bus_structure: null
-    coordinate: [728, 272.0]
-    rotation: 0
-    state: enabled
-- name: blocks_probe_rate_0
+- name: blocks_probe_rate_1
   id: blocks_probe_rate
   parameters:
     affinity: ''
     alias: ''
     alpha: '0.15'
     comment: ''
+    maxoutbuf: int(2e6)
+    minoutbuf: '0'
+    mintime: '2000'
+    name: ''
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1456, 964.0]
+    rotation: 0
+    state: enabled
+- name: blocks_throttle2_0
+  id: blocks_throttle2
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    ignoretag: 'True'
+    limit: auto
+    maximum: '0.1'
     maxoutbuf: '0'
     minoutbuf: '0'
-    mintime: '500.0'
-    name: ''
+    samples_per_second: device_rate*2*4
     type: float
     vlen: '1'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [536, 436.0]
+    coordinate: [984, 892.0]
     rotation: 0
     state: enabled
-- name: blocks_wavfile_source_0
-  id: blocks_wavfile_source
+- name: network_udp_sink_0
+  id: network_udp_sink
   parameters:
+    addr: 127.0.0.1
     affinity: ''
     alias: ''
     comment: ''
-    file: '"music/I Don''t Know.wav"'
-    maxoutbuf: '0'
-    minoutbuf: '0'
-    nchan: '1'
-    repeat: 'True'
+    header: '0'
+    payloadsize: '1024'
+    port: '5007'
+    send_eof: 'False'
+    type: byte
+    vlen: '1'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [64, 252.0]
+    coordinate: [2088, 856.0]
+    rotation: 0
+    state: enabled
+- name: network_udp_source_1_0
+  id: network_udp_source
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    header: '0'
+    ipv6: 'False'
+    maxoutbuf: int(2e6)
+    minoutbuf: '0'
+    notify_missed: 'True'
+    payloadsize: '1024'
+    port: '5006'
+    src_zeros: 'True'
+    type: byte
+    vlen: '1'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [568, 864.0]
     rotation: 0
     state: enabled
 - name: qtgui_time_sink_x_0
@@ -213,13 +273,13 @@ blocks:
     color8: dark red
     color9: dark green
     comment: ''
-    ctrlpanel: 'False'
+    ctrlpanel: 'True'
     entags: 'True'
     grid: 'False'
     gui_hint: ''
-    label1: Signal 1
+    label1: TX
     label10: Signal 10
-    label2: Signal 2
+    label2: RX
     label3: Signal 3
     label4: Signal 4
     label5: Signal 5
@@ -238,7 +298,7 @@ blocks:
     marker7: '-1'
     marker8: '-1'
     marker9: '-1'
-    name: '""'
+    name: At Port"
     nconnections: '2'
     size: '1024'
     srate: samp_rate
@@ -272,28 +332,71 @@ blocks:
     width8: '1'
     width9: '1'
     ylabel: Amplitude
-    ymax: '1'
-    ymin: '-1'
+    ymax: '128'
+    ymin: '-128'
     yunit: '""'
   states:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [880, 348.0]
+    coordinate: [1492.0, 616]
+    rotation: 90
+    state: enabled
+- name: rational_resampler_xxx_0
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '1'
+    fbw: '0'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '1'
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1176, 876.0]
+    rotation: 0
+    state: enabled
+- name: rational_resampler_xxx_1
+  id: rational_resampler_xxx
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    decim: '1'
+    fbw: '0'
+    interp: '1'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+    taps: '1'
+    type: fff
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [1728, 868.0]
     rotation: 0
     state: enabled
 
 connections:
-- [blocks_char_to_float_0, '0', blocks_multiply_const_vxx_0_0, '0']
+- [blocks_char_to_float_0, '0', qtgui_time_sink_x_0, '1']
+- [blocks_char_to_float_0, '0', rational_resampler_xxx_1, '0']
+- [blocks_char_to_float_0_0, '0', blocks_throttle2_0, '0']
 - [blocks_float_to_char_0, '0', blocks_char_to_float_0, '0']
-- [blocks_multiply_const_vxx_0, '0', blocks_float_to_char_0, '0']
-- [blocks_multiply_const_vxx_0_0, '0', audio_sink_0, '0']
-- [blocks_multiply_const_vxx_0_0, '0', qtgui_time_sink_x_0, '0']
-- [blocks_probe_rate_0, rate, blocks_message_debug_0, print]
-- [blocks_wavfile_source_0, '0', blocks_multiply_const_vxx_0, '0']
-- [blocks_wavfile_source_0, '0', blocks_probe_rate_0, '0']
-- [blocks_wavfile_source_0, '0', qtgui_time_sink_x_0, '1']
+- [blocks_float_to_char_0_0, '0', network_udp_sink_0, '0']
+- [blocks_probe_rate_1, rate, blocks_message_debug_1, print]
+- [blocks_throttle2_0, '0', rational_resampler_xxx_0, '0']
+- [network_udp_source_1_0, '0', blocks_char_to_float_0_0, '0']
+- [network_udp_source_1_0, '0', blocks_probe_rate_1, '0']
+- [rational_resampler_xxx_0, '0', blocks_float_to_char_0, '0']
+- [rational_resampler_xxx_0, '0', qtgui_time_sink_x_0, '0']
+- [rational_resampler_xxx_1, '0', blocks_float_to_char_0_0, '0']
 
 metadata:
   file_format: 1
-  grc_version: 3.10.12.0
+  grc_version: 3.10.10.0

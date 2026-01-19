@@ -88,7 +88,7 @@ class AudioStreamer(QWidget):
             "-ac", "1", #mono for 1 and stereo for 2
             "-ar", str(audio_rate), #audio playback rate
             "-f", "f32le", #32 bit float for gnuradio
-            "-packetsize","32", #in bytes (gnuradio is in bytes as well)
+            "-packetsize","16", #in bytes (gnuradio is in bytes as well)
             f"udp://{self.ip}:{self.port}" #where to transport stream
         ]
 

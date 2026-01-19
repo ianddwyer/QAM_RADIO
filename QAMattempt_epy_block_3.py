@@ -1,30 +1,45 @@
+import numpy as np
 from gnuradio import gr
-import pmt
+import sys
 
-class PMTByteArrayToString(gr.basic_block):
-    def __init__(self):
-        gr.basic_block.__init__(
+class blk(gr.decim_block):
+    def __init__(self, byte_order="little"):
+        gr.decim_block.__init__(
             self,
-            name="Bytes to String",
-            in_sig=None, out_sig=None
+            name="u8x4_to_stereo_f32_i16unpack",
+            in_sig=[np.uint8],
+            out_sig=[np.float32, np.float32],
+            decim=4,
         )
+        self.byte_order = str(byte_order).lower()
 
-        # Register input and output message ports
-        self.message_port_register_in(pmt.intern("in"))
-        self.message_port_register_out(pmt.intern("out"))
-        self.set_msg_handler(pmt.intern("in"), self.handle_msg)
+    def work(self, input_items, output_items):
+        x = input_items[0]
+        l_out = output_items[0]
+        r_out = output_items[1]
 
-    def handle_msg(self, msg):
+        n_out = min(len(l_out), len(r_out), len(x) // 4)
+        if n_out <= 0:
+            return 0
 
-        # ensure the input is a PMT byte vector, not a PDU
-        if not pmt.is_u8vector(msg): return
+        b = x[:4*n_out].reshape(n_out, 4)
 
-        # convert PMT byte vector to a Python byte array
-        byte_array = bytearray(pmt.u8vector_elements(msg))
+        want_little = (self.byte_order != "big")
+        host_little = (sys.byteorder == "little")
+        if want_little != host_little:
+            b = b[:, ::-1]
 
-        # convert bytes to string (UTF-8 decoding), use try for safety in live streaming
-        try:string_message = byte_array.decode("utf-8")
-        except UnicodeDecodeError: string_message = byte_array.decode("ISO-8859-1")  # Fallback use ISO format for compatibility
+        u32 = b.reshape(4*n_out).view(np.uint32)
 
-        # publish the string as a PMT symbol (message)
-        self.message_port_pub(pmt.intern("out"), pmt.intern(string_message))
+        hi = (u32 >> 16).astype(np.uint16)
+        lo = (u32 & 0xFFFF).astype(np.uint16)
+
+        li16 = hi.view(np.int16)
+        ri16 = lo.view(np.int16)
+
+        l = li16.astype(np.float32) / 32768.0
+        r = ri16.astype(np.float32) / 32768.0
+
+        l_out[:n_out] = np.clip(l, -1.0, 1.0)
+        r_out[:n_out] = np.clip(r, -1.0, 1.0)
+        return n_out

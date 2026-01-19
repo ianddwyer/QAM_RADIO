@@ -79,7 +79,23 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [952, 572.0]
+    coordinate: [1216, 360.0]
+    rotation: 0
+    state: enabled
+- name: blocks_unpack_k_bits_bb_0
+  id: blocks_unpack_k_bits_bb
+  parameters:
+    affinity: ''
+    alias: ''
+    comment: ''
+    k: '8'
+    maxoutbuf: '0'
+    minoutbuf: '0'
+  states:
+    bus_sink: false
+    bus_source: false
+    bus_structure: null
+    coordinate: [648, 364.0]
     rotation: 0
     state: enabled
 - name: digital_correlate_access_code_xx_ts_0
@@ -98,7 +114,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [648, 564.0]
+    coordinate: [912, 352.0]
     rotation: 0
     state: true
 - name: digital_crc32_bb_0_0
@@ -116,7 +132,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1168, 564.0]
+    coordinate: [1440, 352.0]
     rotation: 0
     state: true
 - name: packet_len
@@ -125,9 +141,9 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: Packet Length
+    label: Packet Length Size
     short_id: ''
-    type: ''
+    type: intx
     value: '252'
   states:
     bus_sink: false
@@ -142,10 +158,10 @@ blocks:
     alias: ''
     comment: ''
     hide: none
-    label: Packet Length
+    label: Packet Length Name
     short_id: ''
-    type: ''
-    value: '"packet_len"'
+    type: str
+    value: packet_len
   states:
     bus_sink: false
     bus_source: false
@@ -168,7 +184,7 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [1472, 584.0]
+    coordinate: [1744, 368.0]
     rotation: 0
     state: enabled
 - name: pad_source_0
@@ -188,16 +204,17 @@ blocks:
     bus_sink: false
     bus_source: false
     bus_structure: null
-    coordinate: [176, 584.0]
+    coordinate: [448, 368.0]
     rotation: 0
     state: enabled
 
 connections:
 - [blocks_repack_bits_bb_1_0, '0', digital_crc32_bb_0_0, '0']
+- [blocks_unpack_k_bits_bb_0, '0', digital_correlate_access_code_xx_ts_0, '0']
 - [digital_correlate_access_code_xx_ts_0, '0', blocks_repack_bits_bb_1_0, '0']
 - [digital_crc32_bb_0_0, '0', pad_sink_0, '0']
-- [pad_source_0, '0', digital_correlate_access_code_xx_ts_0, '0']
+- [pad_source_0, '0', blocks_unpack_k_bits_bb_0, '0']
 
 metadata:
   file_format: 1
-  grc_version: 3.10.10.0
+  grc_version: 3.10.12.0
